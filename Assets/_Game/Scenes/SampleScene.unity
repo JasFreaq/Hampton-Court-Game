@@ -133,7 +133,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5113383}
   m_Layer: 5
-  m_Name: Substitute Location Transform
+  m_Name: Tile Spawn Transform
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -156,6 +156,41 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 450}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &455217856
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 455217857}
+  m_Layer: 5
+  m_Name: Tile Fall Transform
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &455217857
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 455217856}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1216685299}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: -450}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &519420028
@@ -444,9 +479,13 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 2b569875ad7b0e54e974bf9701c8dd79, type: 2}
   - {fileID: 11400000, guid: f2788ee64b524394a9ff4e6d34d71b06, type: 2}
   m_tileSubstitute: {fileID: 2234042959505472105, guid: 1be5847fc694ea04d923af452b6fba88, type: 3}
-  m_substituteInitLocation: {fileID: 5113383}
-  m_boardSetupRowFallTime: 0.8
-  m_boardSetupNextColumnTime: 0.25
+  m_tileSpawnLocation: {fileID: 5113383}
+  m_tileFallLocation: {fileID: 455217857}
+  m_substitutePoolCount: 12
+  m_spawnFallTime: 0.6
+  m_spawnNextColumnTime: 0.25
+  m_tileSwapTime: 1
+  m_matchedFallTime: 0.6
 --- !u!1 &1216685298
 GameObject:
   m_ObjectHideFlags: 0
@@ -479,6 +518,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5113383}
+  - {fileID: 455217857}
   - {fileID: 795621539}
   m_Father: {fileID: 1264199673}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

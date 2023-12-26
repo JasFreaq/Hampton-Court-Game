@@ -13,10 +13,12 @@ public class TileObject : MonoBehaviour
     private TileItem m_tileItem;
 
     private Vector2Int m_tileIndex;
-
+    
     private Action<Vector2Int> m_onSelect;
 
     public TileItem TileItem => m_tileItem;
+
+    public bool Validated => m_tileItem != null;
 
     public Vector2Int TileIndex
     {
@@ -27,15 +29,20 @@ public class TileObject : MonoBehaviour
     public static void Swap(TileObject tileA, TileObject tileB)
     {
         TileItem tileItem = tileA.TileItem;
-        tileA.SetTileItem(tileB.TileItem);
-        tileB.SetTileItem(tileItem);
+        tileA.InitialiseTile(tileB.TileItem);
+        tileB.InitialiseTile(tileItem);
     }
 
-    public void SetTileItem(TileItem tileItem)
+    public void InitialiseTile(TileItem tileItem)
     {
         m_tileItem = tileItem;
-
         m_itemImage.sprite = tileItem.Image;
+    }
+    
+    public void InvalidateTile()
+    {
+        m_tileItem = null;
+        m_itemImage.sprite = null;
     }
 
     public void EnableSelection(bool enable)

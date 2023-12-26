@@ -16,19 +16,21 @@ public class BoardHandler : MonoBehaviour
     [SerializeField] private TileObject m_tilePrefab;
     [SerializeField] private TileItem[] m_tileItems;
     [SerializeField] private TileSubstitute m_tileSubstitute;
-    [SerializeField] private Transform m_substituteInitLocation;
+    [SerializeField] private Transform m_tileSpawnLocation;
+    [SerializeField] private Transform m_tileFallLocation;
     
     [Header("Tile Transitions")]
     [SerializeField] private int m_substitutePoolCount = 12;
+    [SerializeField] private float m_spawnFallTime = 0.8f;
+    [SerializeField] private float m_spawnNextColumnTime = 0.25f;
     [SerializeField] private float m_tileSwapTime = 1f;
-    [SerializeField] private float m_boardSetupRowFallTime = 0.8f;
-    [SerializeField] private float m_boardSetupNextColumnTime = 0.25f;
+    [SerializeField] private float m_matchedFallTime = 0.6f;
 
     private TileObject[,] m_tileObjects;
 
     private List<TileSubstitute> m_tileSubstitutes = new List<TileSubstitute>();
 
-    private TileObject m_currentTile;
+    private TileObject m_currentSelectedTile;
 
     private void Start()
     {
@@ -40,7 +42,7 @@ public class BoardHandler : MonoBehaviour
             {
                 TileObject tileObject = Instantiate(m_tilePrefab, transform);
 
-                tileObject.SetTileItem(m_tileItems[Random.Range(0, m_tileItems.Length)]);
+                tileObject.InitialiseTile(m_tileItems[Random.Range(0, m_tileItems.Length)]);
                 tileObject.EnableSelection(false);
                 tileObject.EnableImage(false);
                 tileObject.TileIndex = new Vector2Int(i, j);
@@ -52,7 +54,7 @@ public class BoardHandler : MonoBehaviour
 
         FixMatchingTiles();
 
-        StartCoroutine(BoardSetupRoutine());
+        StartCoroutine(TilePlacementRoutine(true));
     }
 
     private void OnDisable()
@@ -160,73 +162,103 @@ public class BoardHandler : MonoBehaviour
         while (m_tileObjects[i, j].TileItem.Name == replacementItem.Name)
             replacementItem = m_tileItems[Random.Range(0, m_tileItems.Length)];
 
-        m_tileObjects[i, j].SetTileItem(replacementItem);
+        m_tileObjects[i, j].InitialiseTile(replacementItem);
     }
-
-    private IEnumerator BoardSetupRoutine()
+    
+    private IEnumerator TilePlacementRoutine(bool setup)
     {
         yield return new WaitForEndOfFrame();
 
-        yield return TilePlacementRoutine(0, m_tileRows - 1, 0, m_tileColumns - 1);
-    }
+        WaitForSeconds waitForSeconds = new WaitForSeconds(m_spawnNextColumnTime);
 
-    private IEnumerator TilePlacementRoutine(int rowStart, int rowEnd, int columnStart, int columnEnd)
-    {
-        WaitForSeconds waitForSeconds = new WaitForSeconds(m_boardSetupNextColumnTime);
-
-        for (int j = columnStart; j <= columnEnd; j++)
+        for (int j = 0; j < m_tileColumns; j++)
         {
-            for (int i = rowStart; i <= rowEnd; i++)
+            bool fallingInColumn = setup;
+
+            for (int i = 0; i < m_tileRows; i++)
             {
                 TileObject tileObject = m_tileObjects[i, j];
-
-                Vector3 substitutePosition = tileObject.transform.position;
-                substitutePosition.y = m_substituteInitLocation.position.y;
-
-                TileSubstitute substitute = Instantiate(m_tileSubstitute, substitutePosition, Quaternion.identity,
-                    transform.parent);
-
-                bool addedToPool = false;
-                if (m_tileSubstitutes.Count < m_substitutePoolCount)
+                
+                if ((setup && tileObject.Validated) || (!setup && !tileObject.Validated)) 
                 {
-                    m_tileSubstitutes.Add(substitute);
-                    addedToPool = true;
-                }
-
-                substitute.InitialiseSubstitute(tileObject.TileItem.Image);
-
-                substitute.transform.DOMove(tileObject.transform.position, m_boardSetupRowFallTime * (i + 1))
-                    .SetEase(Ease.OutBounce)
-                    .OnComplete(() =>
+                    if (!setup)
                     {
-                        if (addedToPool)
-                            substitute.gameObject.SetActive(false);
-                        else
-                            Destroy(substitute.gameObject);
+                        TileItem newItem = m_tileItems[Random.Range(0, m_tileItems.Length)];
+                        tileObject.InitialiseTile(newItem);
 
-                        tileObject.EnableImage(true);
-                    });
+                        fallingInColumn = true;
+                    }
+
+                    Vector3 substitutePosition = tileObject.transform.position;
+                    substitutePosition.y = m_tileSpawnLocation.position.y;
+
+                    TileSubstitute substitute = Instantiate(m_tileSubstitute, substitutePosition, Quaternion.identity,
+                        transform.parent);
+
+                    bool addedToPool = false;
+                    if (m_tileSubstitutes.Count < m_substitutePoolCount)
+                    {
+                        m_tileSubstitutes.Add(substitute);
+                        addedToPool = true;
+                    }
+
+                    substitute.InitialiseSubstitute(tileObject.TileItem.Image);
+                    
+                    substitute.transform.DOMove(tileObject.transform.position, m_spawnFallTime)
+                        .SetEase(Ease.OutBack)
+                        .OnComplete(() =>
+                        {
+                            if (addedToPool)
+                                substitute.gameObject.SetActive(false);
+                            else
+                                Destroy(substitute.gameObject);
+
+                            if (!setup && CheckMatches(tileObject.TileIndex, out List<TileObject> matchingTiles))
+                            {
+                                HandleMatchedTiles(matchingTiles);
+                                StartCoroutine(TilePlacementRoutine(false));
+                            }
+
+                            tileObject.EnableImage(true);
+                        });
+                }
             }
 
-            yield return waitForSeconds;
+            if (fallingInColumn)
+                yield return waitForSeconds;
         }
     }
 
     private void OnTileSelected(Vector2Int tileIndex)
     {
-        TileObject selectedTile = m_tileObjects[tileIndex.x, tileIndex.y];
-
-        if (m_currentTile == null)
+        TileObject newSelectedTile = m_tileObjects[tileIndex.x, tileIndex.y];
+        
+        if (m_currentSelectedTile == null)
         {
-            m_currentTile = selectedTile;
-            m_currentTile.EnableSelection(true);
+            m_currentSelectedTile = newSelectedTile;
+            m_currentSelectedTile.EnableSelection(true);
         }
-        else if (m_currentTile != selectedTile)
+        else if (m_currentSelectedTile != newSelectedTile)
         {
-            m_currentTile.EnableSelection(false);
-            SwapTiles(m_currentTile, selectedTile);
+            Vector2Int currentIndex = m_currentSelectedTile.TileIndex;
+            Vector2Int newIndex = newSelectedTile.TileIndex;
 
-            m_currentTile = null;
+            if ((newIndex.x == currentIndex.x - 1 || newIndex.x == currentIndex.x + 1) !=
+                (newIndex.y == currentIndex.y - 1 || newIndex.y == currentIndex.y + 1) &&
+                MathF.Abs(Vector2Int.Distance(currentIndex, newIndex)) - Mathf.Epsilon <= 1f)  
+            {
+                m_currentSelectedTile.EnableSelection(false);
+                SwapTiles(m_currentSelectedTile, newSelectedTile);
+
+                m_currentSelectedTile = null;
+            }
+            else
+            {
+                m_currentSelectedTile.EnableSelection(false);
+                
+                m_currentSelectedTile = newSelectedTile;
+                m_currentSelectedTile.EnableSelection(true);
+            }
         }
     }
 
@@ -269,25 +301,21 @@ public class BoardHandler : MonoBehaviour
 
                 if (CheckMatches(tileA.TileIndex, out List<TileObject> matchingTilesA)) 
                 {
-                    foreach (TileObject tileObject in matchingTilesA)
-                    {
-                        tileObject.transform.localScale *= 1.5f;
-                    }
-
+                    HandleMatchedTiles(matchingTilesA);
                     matched = true;
                 }
                 
                 if (CheckMatches(tileB.TileIndex, out List<TileObject> matchingTilesB))
                 {
-                    foreach (TileObject tileObject in matchingTilesB)
-                    {
-                        tileObject.transform.localScale *= 1.5f;
-                    }
-
+                    HandleMatchedTiles(matchingTilesB);
                     matched = true;
                 }
 
-                if (!matched) 
+                if (matched)
+                {
+                    StartCoroutine(TilePlacementRoutine(false));
+                }
+                else
                 {
                     SwapTiles(tileB, tileA, true);
                 }
@@ -296,7 +324,7 @@ public class BoardHandler : MonoBehaviour
 
         sequence.Play();
     }
-
+    
     private TileSubstitute GetAvailableSubstitute()
     {
         foreach (TileSubstitute substitute in m_tileSubstitutes)
@@ -315,8 +343,6 @@ public class BoardHandler : MonoBehaviour
 
     private bool CheckMatches(Vector2Int index, out List<TileObject> matchingTiles)
     {
-        matchingTiles = new List<TileObject>();
-
         HashSet<TileObject> horizontalTiles = new HashSet<TileObject> { m_tileObjects[index.x, index.y] };
         horizontalTiles = CheckMatchesHorizontal(index, horizontalTiles);
         if (horizontalTiles.Count < 3)
@@ -330,9 +356,13 @@ public class BoardHandler : MonoBehaviour
         {
             verticalTiles.Clear();
         }
-        
-        matchingTiles.AddRange(horizontalTiles);
-        matchingTiles.AddRange(verticalTiles);
+
+        HashSet<TileObject> matchingTilesSet = new HashSet<TileObject>();
+        matchingTilesSet.AddRange(horizontalTiles);
+        matchingTilesSet.AddRange(verticalTiles);
+
+        matchingTiles = new List<TileObject>();
+        matchingTiles.AddRange(matchingTilesSet);
 
         return matchingTiles.Count > 0;
     }
@@ -345,11 +375,11 @@ public class BoardHandler : MonoBehaviour
 
             if (!matchingTiles.Contains(m_tileObjects[checkIndex.x, checkIndex.y])) 
             {
-                if (m_tileObjects[index.x, index.y].TileItem.Name ==
-                    m_tileObjects[checkIndex.x, checkIndex.y].TileItem.Name)
+                if (m_tileObjects[index.x, index.y].TileItem?.Name ==
+                    m_tileObjects[checkIndex.x, checkIndex.y].TileItem?.Name)
                 {
                     matchingTiles.Add(m_tileObjects[checkIndex.x, checkIndex.y]);
-                    CheckMatchesHorizontal(checkIndex, matchingTiles);
+                    matchingTiles = CheckMatchesHorizontal(checkIndex, matchingTiles);
                 }
             }
         }
@@ -360,11 +390,11 @@ public class BoardHandler : MonoBehaviour
 
             if (!matchingTiles.Contains(m_tileObjects[checkIndex.x, checkIndex.y])) 
             {
-                if (m_tileObjects[index.x, index.y].TileItem.Name ==
-                    m_tileObjects[checkIndex.x, checkIndex.y].TileItem.Name)
+                if (m_tileObjects[index.x, index.y].TileItem?.Name ==
+                    m_tileObjects[checkIndex.x, checkIndex.y].TileItem?.Name)
                 {
                     matchingTiles.Add(m_tileObjects[checkIndex.x, checkIndex.y]);
-                    CheckMatchesHorizontal(checkIndex, matchingTiles);
+                    matchingTiles = CheckMatchesHorizontal(checkIndex, matchingTiles);
                 }
             }
         }
@@ -380,11 +410,11 @@ public class BoardHandler : MonoBehaviour
             
             if (!matchingTiles.Contains(m_tileObjects[checkIndex.x, checkIndex.y]))
             {
-                if (m_tileObjects[index.x, index.y].TileItem.Name ==
-                    m_tileObjects[checkIndex.x, checkIndex.y].TileItem.Name)
+                if (m_tileObjects[index.x, index.y].TileItem?.Name ==
+                    m_tileObjects[checkIndex.x, checkIndex.y].TileItem?.Name)
                 {
                     matchingTiles.Add(m_tileObjects[checkIndex.x, checkIndex.y]);
-                    CheckMatchesVertical(checkIndex, matchingTiles);
+                    matchingTiles = CheckMatchesVertical(checkIndex, matchingTiles);
                 }
             }
         }
@@ -395,15 +425,80 @@ public class BoardHandler : MonoBehaviour
 
             if (!matchingTiles.Contains(m_tileObjects[checkIndex.x, checkIndex.y]))
             {
-                if (m_tileObjects[index.x, index.y].TileItem.Name ==
-                    m_tileObjects[checkIndex.x, checkIndex.y].TileItem.Name)
+                if (m_tileObjects[index.x, index.y].TileItem?.Name ==
+                    m_tileObjects[checkIndex.x, checkIndex.y].TileItem?.Name)
                 {
                     matchingTiles.Add(m_tileObjects[checkIndex.x, checkIndex.y]);
-                    CheckMatchesVertical(checkIndex, matchingTiles);
+                    matchingTiles = CheckMatchesVertical(checkIndex, matchingTiles);
                 }
             }
         }
 
         return matchingTiles;
+    }
+
+    private void HandleMatchedTiles(List<TileObject> tileObjects)
+    {
+        foreach (TileObject tileObject in tileObjects)
+        {
+            Vector2Int tileIndex = tileObject.TileIndex;
+
+            TileSubstitute fallSubstitute = GetAvailableSubstitute();
+
+            fallSubstitute.InitialiseSubstitute(tileObject.TileItem.Image);
+            Debug.Log($"{tileObject.TileItem.Image}");
+            fallSubstitute.transform.position = tileObject.transform.position;
+            fallSubstitute.gameObject.SetActive(true);
+
+            Vector3 fallPosition = tileObject.transform.position;
+            fallPosition.y = m_tileFallLocation.position.y - fallPosition.y;
+            
+            fallSubstitute.transform.DOMove(fallPosition, m_matchedFallTime)
+                .SetEase(Ease.InBack)
+                .OnComplete(() => fallSubstitute.gameObject.SetActive(false));
+
+            tileObject.InvalidateTile();
+            tileObject.EnableImage(false);
+        }
+
+        foreach (TileObject tileObject in tileObjects)
+        {
+            Vector2Int tileIndex = tileObject.TileIndex;
+
+            for (int i = tileIndex.x - 1; i >= 0; i--)
+            {
+                TileObject fallingTile = m_tileObjects[i, tileIndex.y];
+                if (fallingTile.Validated)
+                {
+                    TileSubstitute fallSubstitute = GetAvailableSubstitute();
+                    fallSubstitute.InitialiseSubstitute(fallingTile.TileItem.Image);
+                    fallSubstitute.transform.position = fallingTile.transform.position;
+                    fallSubstitute.gameObject.SetActive(true);
+
+                    TileObject destinationTile = m_tileObjects[i + 1, tileIndex.y];
+                    for (int k = i + 2; k < m_tileRows; k++)
+                    {
+                        TileObject nextTile = m_tileObjects[k, tileIndex.y];
+                        if (!nextTile.Validated)
+                        {
+                            destinationTile = nextTile;
+                        }
+                    }
+
+                    fallSubstitute.transform.DOMove(destinationTile.transform.position, m_matchedFallTime)
+                        .SetEase(Ease.InBack)
+                        .OnComplete(() =>
+                        {
+                            fallSubstitute.gameObject.SetActive(false);
+                            destinationTile.EnableImage(true);
+                        });
+
+                    destinationTile.InitialiseTile(fallingTile.TileItem);
+
+                    fallingTile.InvalidateTile();
+                    fallingTile.EnableImage(false);
+                }
+            }
+        }
     }
 }
