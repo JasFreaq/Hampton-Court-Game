@@ -398,7 +398,7 @@ GameObject:
   - component: {fileID: 795621539}
   - component: {fileID: 795621540}
   - component: {fileID: 795621542}
-  - component: {fileID: 795621541}
+  - component: {fileID: 795621543}
   m_Layer: 5
   m_Name: Board
   m_TagString: Untagged
@@ -433,30 +433,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 795621538}
   m_CullTransparentMesh: 1
---- !u!114 &795621541
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 795621538}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8a8695521f0d02e499659fee002a26c2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Padding:
-    m_Left: 5
-    m_Right: 5
-    m_Top: 5
-    m_Bottom: 5
-  m_ChildAlignment: 0
-  m_StartCorner: 0
-  m_StartAxis: 0
-  m_CellSize: {x: 110, y: 110}
-  m_Spacing: {x: 7.5, y: 7.5}
-  m_Constraint: 1
-  m_ConstraintCount: 12
 --- !u!114 &795621542
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -478,14 +454,39 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f82ddc8b6d52bdd44b0388cb97af86a7, type: 2}
   - {fileID: 11400000, guid: 2b569875ad7b0e54e974bf9701c8dd79, type: 2}
   - {fileID: 11400000, guid: f2788ee64b524394a9ff4e6d34d71b06, type: 2}
-  m_tileSubstitute: {fileID: 2234042959505472105, guid: 1be5847fc694ea04d923af452b6fba88, type: 3}
+  m_tilePlaceholder: {fileID: 6605256912425589483, guid: 2eefec5d64b0b6a41b5dfa2ced6d9ff6, type: 3}
   m_tileSpawnLocation: {fileID: 5113383}
   m_tileFallLocation: {fileID: 455217857}
-  m_substitutePoolCount: 12
+  m_tileObjectPoolCount: 12
   m_spawnFallTime: 0.6
   m_spawnNextColumnTime: 0.25
   m_tileSwapTime: 1
-  m_matchedFallTime: 0.6
+  m_matchedFallTime: 0.4
+  m_newMatchBufferTime: 0.2
+--- !u!114 &795621543
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 795621538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a8695521f0d02e499659fee002a26c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Padding:
+    m_Left: 5
+    m_Right: 5
+    m_Top: 5
+    m_Bottom: 5
+  m_ChildAlignment: 0
+  m_StartCorner: 0
+  m_StartAxis: 0
+  m_CellSize: {x: 110, y: 110}
+  m_Spacing: {x: 8, y: 5}
+  m_Constraint: 0
+  m_ConstraintCount: 2
 --- !u!1 &1216685298
 GameObject:
   m_ObjectHideFlags: 0

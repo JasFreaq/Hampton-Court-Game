@@ -26,13 +26,6 @@ public class TileObject : MonoBehaviour
         set { m_tileIndex = value; }
     }
 
-    public static void Swap(TileObject tileA, TileObject tileB)
-    {
-        TileItem tileItem = tileA.TileItem;
-        tileA.InitialiseTile(tileB.TileItem);
-        tileB.InitialiseTile(tileItem);
-    }
-
     public void InitialiseTile(TileItem tileItem)
     {
         m_tileItem = tileItem;

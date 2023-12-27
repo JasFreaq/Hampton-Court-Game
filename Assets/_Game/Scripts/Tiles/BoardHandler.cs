@@ -15,51 +15,61 @@ public class BoardHandler : MonoBehaviour
     [SerializeField] private int m_tileColumns = 12;
     [SerializeField] private TileObject m_tilePrefab;
     [SerializeField] private TileItem[] m_tileItems;
-    [SerializeField] private TileSubstitute m_tileSubstitute;
+    [SerializeField] private GameObject m_tilePlaceholder;
     [SerializeField] private Transform m_tileSpawnLocation;
     [SerializeField] private Transform m_tileFallLocation;
     
     [Header("Tile Transitions")]
-    [SerializeField] private int m_substitutePoolCount = 12;
-    [SerializeField] private float m_spawnFallTime = 0.8f;
+    [SerializeField] private int m_tileObjectPoolCount = 12;
+    [SerializeField] private float m_spawnFallTime = 0.6f;
     [SerializeField] private float m_spawnNextColumnTime = 0.25f;
     [SerializeField] private float m_tileSwapTime = 1f;
-    [SerializeField] private float m_matchedFallTime = 0.6f;
+    [SerializeField] private float m_matchedFallTime = 0.4f;
+    [SerializeField] private float m_newMatchBufferTime = 0.2f;
 
-    private TileObject[,] m_tileObjects;
+    private Transform[,] m_tilePlaceholders;
+    private TileObject[,] m_boardTileObjects;
 
-    private List<TileSubstitute> m_tileSubstitutes = new List<TileSubstitute>();
-
+    private List<TileObject> m_tileObjectPool = new List<TileObject>();
+    
     private TileObject m_currentSelectedTile;
 
     private void Start()
     {
-        m_tileObjects = new TileObject[m_tileRows, m_tileColumns];
+        m_boardTileObjects = new TileObject[m_tileRows, m_tileColumns];
+        m_tilePlaceholders = new Transform[m_tileRows, m_tileColumns];
 
         for (int i = 0; i < m_tileRows; i++)
         {
             for (int j = 0; j < m_tileColumns; j++)
             {
-                TileObject tileObject = Instantiate(m_tilePrefab, transform);
+                GameObject tilePlaceholder = Instantiate(m_tilePlaceholder, transform);
 
-                tileObject.InitialiseTile(m_tileItems[Random.Range(0, m_tileItems.Length)]);
-                tileObject.EnableSelection(false);
-                tileObject.EnableImage(false);
-                tileObject.TileIndex = new Vector2Int(i, j);
-                tileObject.RegisterOnSelect(OnTileSelected);
-
-                m_tileObjects[i, j] = tileObject;
+                m_tilePlaceholders[i, j] = tilePlaceholder.transform;
             }
         }
 
-        FixMatchingTiles();
+        StartCoroutine(TileSpawnRoutine());
+    }
 
-        StartCoroutine(TilePlacementRoutine(true));
+    private void Update()
+    {
+        //string log = "";
+        //for (int i = 0; i < m_tileRows; i++)
+        //{
+        //    for (int j = 0; j < m_tileColumns; j++)
+        //    {
+        //        log +=
+        //            $"[{i}, {j}] : {(m_boardTileObjects[i, j] != null ? m_boardTileObjects[i, j].TileItem : null)}";
+        //    }
+        //}
+
+        //Debug.Log(log);
     }
 
     private void OnDisable()
     {
-        foreach (TileObject tileObject in m_tileObjects)
+        foreach (TileObject tileObject in m_boardTileObjects)
         {
             tileObject.DeregisterOnSelect(OnTileSelected);
         }
@@ -83,8 +93,8 @@ public class BoardHandler : MonoBehaviour
                 {
                     if (i < m_tileRows - 2) 
                     {
-                        if (m_tileObjects[i, j].TileItem.Name == m_tileObjects[i + 1, j].TileItem.Name &&
-                            m_tileObjects[i, j].TileItem.Name == m_tileObjects[i + 2, j].TileItem.Name)
+                        if (m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i + 1, j].TileItem?.Name &&
+                            m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i + 2, j].TileItem?.Name)
                         {
                             if (adjustMatch)
                             {
@@ -97,19 +107,19 @@ public class BoardHandler : MonoBehaviour
 
                                 if (j == 0)
                                 {
-                                    swapTile = m_tileObjects[i, j + 1];
+                                    swapTile = m_boardTileObjects[i, j + 1];
                                 }
                                 else if (j > 0 && j < m_tileColumns - 1)
                                 {
-                                    int swapIndex = 1 * Math.Sign(Random.value - 1f);
-                                    swapTile = m_tileObjects[i, j + swapIndex];
+                                    int swapIndex = Math.Sign(Random.value - 1f);
+                                    swapTile = m_boardTileObjects[i, j + swapIndex];
                                 }
                                 else
                                 {
-                                    swapTile = m_tileObjects[i, j - 1];
+                                    swapTile = m_boardTileObjects[i, j - 1];
                                 }
 
-                                TileObject.Swap(m_tileObjects[i, j], swapTile);
+                                SwapTileData(m_boardTileObjects[i, j], swapTile);
 
                                 matchesFound = true;
                             }
@@ -118,8 +128,8 @@ public class BoardHandler : MonoBehaviour
 
                     if (j < m_tileColumns - 2) 
                     {
-                        if (m_tileObjects[i, j].TileItem.Name == m_tileObjects[i, j + 1].TileItem.Name &&
-                            m_tileObjects[i, j].TileItem.Name == m_tileObjects[i, j + 2].TileItem.Name)
+                        if (m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i, j + 1].TileItem?.Name &&
+                            m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i, j + 2].TileItem?.Name)
                         {
                             if (adjustMatch)
                             {
@@ -132,19 +142,19 @@ public class BoardHandler : MonoBehaviour
 
                                 if (i == 0)
                                 {
-                                    swapTile = m_tileObjects[i + 1, j];
+                                    swapTile = m_boardTileObjects[i + 1, j];
                                 }
                                 else if (i > 0 && i < m_tileRows - 1)
                                 {
-                                    int swapIndex = 1 * Math.Sign(Random.value - 1f);
-                                    swapTile = m_tileObjects[i + swapIndex, j];
+                                    int swapIndex = Math.Sign(Random.value - 1f);
+                                    swapTile = m_boardTileObjects[i + swapIndex, j];
                                 }
                                 else
                                 {
-                                    swapTile = m_tileObjects[i - 1, j];
+                                    swapTile = m_boardTileObjects[i - 1, j];
                                 }
 
-                                TileObject.Swap(m_tileObjects[i, j], swapTile);
+                                SwapTileData(m_boardTileObjects[i, j], swapTile);
 
                                 matchesFound = true;
                             }
@@ -159,80 +169,64 @@ public class BoardHandler : MonoBehaviour
     private void ReplaceTileItem(int i, int j)
     {
         TileItem replacementItem = m_tileItems[Random.Range(0, m_tileItems.Length)];
-        while (m_tileObjects[i, j].TileItem.Name == replacementItem.Name)
+        while (m_boardTileObjects[i, j].TileItem.Name == replacementItem.Name)
             replacementItem = m_tileItems[Random.Range(0, m_tileItems.Length)];
 
-        m_tileObjects[i, j].InitialiseTile(replacementItem);
+        m_boardTileObjects[i, j].InitialiseTile(replacementItem);
     }
-    
-    private IEnumerator TilePlacementRoutine(bool setup)
+
+    private IEnumerator TileSpawnRoutine()
     {
         yield return new WaitForEndOfFrame();
+
+        for (int i = 0; i < m_tileRows; i++)
+        {
+            for (int j = 0; j < m_tileColumns; j++)
+            {
+                Vector3 spawnPosition = m_tilePlaceholders[i, j].position;
+                spawnPosition.y = m_tileSpawnLocation.position.y;
+
+                TileObject tileObject = Instantiate(m_tilePrefab, spawnPosition,
+                    Quaternion.identity, transform.parent);
+
+                tileObject.InitialiseTile(m_tileItems[Random.Range(0, m_tileItems.Length)]);
+                tileObject.EnableSelection(false);
+                tileObject.TileIndex = new Vector2Int(i, j);
+                tileObject.RegisterOnSelect(OnTileSelected);
+
+                m_boardTileObjects[i, j] = tileObject;
+            }
+        }
+
+        FixMatchingTiles();
+
+        for (int i = 0; i < m_tileObjectPoolCount; i++)
+        {
+            TileObject tileObject = Instantiate(m_tilePrefab, transform.parent);
+            tileObject.RegisterOnSelect(OnTileSelected);
+            tileObject.gameObject.SetActive(false);
+
+            m_tileObjectPool.Add(tileObject);
+        }
 
         WaitForSeconds waitForSeconds = new WaitForSeconds(m_spawnNextColumnTime);
 
         for (int j = 0; j < m_tileColumns; j++)
         {
-            bool fallingInColumn = setup;
-
             for (int i = 0; i < m_tileRows; i++)
             {
-                TileObject tileObject = m_tileObjects[i, j];
-                
-                if ((setup && tileObject.Validated) || (!setup && !tileObject.Validated)) 
-                {
-                    if (!setup)
-                    {
-                        TileItem newItem = m_tileItems[Random.Range(0, m_tileItems.Length)];
-                        tileObject.InitialiseTile(newItem);
-
-                        fallingInColumn = true;
-                    }
-
-                    Vector3 substitutePosition = tileObject.transform.position;
-                    substitutePosition.y = m_tileSpawnLocation.position.y;
-
-                    TileSubstitute substitute = Instantiate(m_tileSubstitute, substitutePosition, Quaternion.identity,
-                        transform.parent);
-
-                    bool addedToPool = false;
-                    if (m_tileSubstitutes.Count < m_substitutePoolCount)
-                    {
-                        m_tileSubstitutes.Add(substitute);
-                        addedToPool = true;
-                    }
-
-                    substitute.InitialiseSubstitute(tileObject.TileItem.Image);
-                    
-                    substitute.transform.DOMove(tileObject.transform.position, m_spawnFallTime)
-                        .SetEase(Ease.OutBack)
-                        .OnComplete(() =>
-                        {
-                            if (addedToPool)
-                                substitute.gameObject.SetActive(false);
-                            else
-                                Destroy(substitute.gameObject);
-
-                            if (!setup && CheckMatches(tileObject.TileIndex, out List<TileObject> matchingTiles))
-                            {
-                                HandleMatchedTiles(matchingTiles);
-                                StartCoroutine(TilePlacementRoutine(false));
-                            }
-
-                            tileObject.EnableImage(true);
-                        });
-                }
+                Vector3 finalPosition = m_tilePlaceholders[i, j].position;
+                m_boardTileObjects[i, j].transform.DOMove(finalPosition, m_spawnFallTime).SetEase(Ease.OutBack);
             }
 
-            if (fallingInColumn)
-                yield return waitForSeconds;
+            yield return waitForSeconds;
         }
     }
 
     private void OnTileSelected(Vector2Int tileIndex)
     {
-        TileObject newSelectedTile = m_tileObjects[tileIndex.x, tileIndex.y];
-        
+        TileObject newSelectedTile = m_boardTileObjects[tileIndex.x, tileIndex.y];
+
         if (m_currentSelectedTile == null)
         {
             m_currentSelectedTile = newSelectedTile;
@@ -260,60 +254,48 @@ public class BoardHandler : MonoBehaviour
                 m_currentSelectedTile.EnableSelection(true);
             }
         }
+        else 
+        {
+            m_currentSelectedTile.EnableSelection(false);
+            m_currentSelectedTile = null;
+        }
     }
 
     private void SwapTiles(TileObject tileA, TileObject tileB, bool swapback = false)
     {
-        tileA.EnableImage(false);
-        tileB.EnableImage(false);
-
-        TileSubstitute substituteA = GetAvailableSubstitute();
-        substituteA.InitialiseSubstitute(tileA.TileItem.Image);
-        substituteA.transform.position = tileA.transform.position;
-        substituteA.gameObject.SetActive(true);
-
-        TileSubstitute substituteB = GetAvailableSubstitute();
-        substituteB.InitialiseSubstitute(tileB.TileItem.Image);
-        substituteB.transform.position = tileB.transform.position;
-        substituteB.gameObject.SetActive(true);
+        Vector3 targetA = tileB.transform.position;
+        Vector3 targetB = tileA.transform.position;
 
         Sequence sequence = DOTween.Sequence();
 
-        sequence.Join(substituteA.transform.DOMove(tileB.transform.position, m_tileSwapTime)
-            .SetEase(Ease.OutBack));
+        sequence.Join(tileA.transform.DOMove(targetA, m_tileSwapTime).SetEase(Ease.OutBack));
 
-        sequence.Join(substituteB.transform.DOMove(tileA.transform.position, m_tileSwapTime)
-            .SetEase(Ease.OutBack));
+        sequence.Join(tileB.transform.DOMove(targetB, m_tileSwapTime).SetEase(Ease.OutBack));
 
         sequence.OnComplete(() =>
         {
-            substituteA.gameObject.SetActive(false);
-            substituteB.gameObject.SetActive(false);
-
-            TileObject.Swap(tileA, tileB);
-
-            tileA.EnableImage(true);
-            tileB.EnableImage(true);
+            SwapTileData(tileA, tileB);
 
             if (!swapback)
             {
                 bool matched = false;
+                List<TileObject> matchingTiles = new List<TileObject>();
 
                 if (CheckMatches(tileA.TileIndex, out List<TileObject> matchingTilesA)) 
                 {
-                    HandleMatchedTiles(matchingTilesA);
+                    matchingTiles.AddRange(matchingTilesA);
                     matched = true;
                 }
                 
                 if (CheckMatches(tileB.TileIndex, out List<TileObject> matchingTilesB))
                 {
-                    HandleMatchedTiles(matchingTilesB);
+                    matchingTiles.AddRange(matchingTilesB);
                     matched = true;
                 }
 
                 if (matched)
                 {
-                    StartCoroutine(TilePlacementRoutine(false));
+                    HandleMatchedTiles(matchingTiles);
                 }
                 else
                 {
@@ -324,33 +306,51 @@ public class BoardHandler : MonoBehaviour
 
         sequence.Play();
     }
-    
-    private TileSubstitute GetAvailableSubstitute()
+
+    private void SwapTileData(TileObject tileA, TileObject tileB)
     {
-        foreach (TileSubstitute substitute in m_tileSubstitutes)
+        Vector2Int tempIndex = tileB.TileIndex;
+
+        m_boardTileObjects[tileA.TileIndex.x, tileA.TileIndex.y] = tileB;
+        tileB.TileIndex = tileA.TileIndex;
+
+        m_boardTileObjects[tempIndex.x, tempIndex.y] = tileA;
+        tileA.TileIndex = tempIndex;
+    }
+
+    private TileObject GetPooledTile()
+    {
+        TileObject poolTile = null;
+        foreach (TileObject tileObject in m_tileObjectPool)
         {
-            if (!substitute.gameObject.activeSelf)
+            if (!tileObject.gameObject.activeSelf)
             {
-                return substitute;
+                poolTile = tileObject;
             }
         }
 
-        TileSubstitute newSubstitute = Instantiate(m_tileSubstitute, transform.parent);
-        m_tileSubstitutes.Add(newSubstitute);
+        if (poolTile != null)
+        {
+            m_tileObjectPool.Remove(poolTile);
+            poolTile.gameObject.SetActive(true);
+            return poolTile;
+        }
 
-        return newSubstitute;
+        TileObject newTile = Instantiate(m_tilePrefab, transform.parent);
+        newTile.RegisterOnSelect(OnTileSelected);
+        return newTile;
     }
 
     private bool CheckMatches(Vector2Int index, out List<TileObject> matchingTiles)
     {
-        HashSet<TileObject> horizontalTiles = new HashSet<TileObject> { m_tileObjects[index.x, index.y] };
+        HashSet<TileObject> horizontalTiles = new HashSet<TileObject> { m_boardTileObjects[index.x, index.y] };
         horizontalTiles = CheckMatchesHorizontal(index, horizontalTiles);
         if (horizontalTiles.Count < 3)
         {
             horizontalTiles.Clear();
         }
 
-        HashSet<TileObject> verticalTiles = new HashSet<TileObject> { m_tileObjects[index.x, index.y] };
+        HashSet<TileObject> verticalTiles = new HashSet<TileObject> { m_boardTileObjects[index.x, index.y] };
         verticalTiles = CheckMatchesVertical(index, verticalTiles);
         if (verticalTiles.Count < 3)
         {
@@ -373,12 +373,12 @@ public class BoardHandler : MonoBehaviour
         {
             Vector2Int checkIndex = index - new Vector2Int(1, 0);
 
-            if (!matchingTiles.Contains(m_tileObjects[checkIndex.x, checkIndex.y])) 
+            if (!matchingTiles.Contains(m_boardTileObjects[checkIndex.x, checkIndex.y])) 
             {
-                if (m_tileObjects[index.x, index.y].TileItem?.Name ==
-                    m_tileObjects[checkIndex.x, checkIndex.y].TileItem?.Name)
+                if (m_boardTileObjects[index.x, index.y]?.TileItem.Name ==
+                    m_boardTileObjects[checkIndex.x, checkIndex.y]?.TileItem.Name)
                 {
-                    matchingTiles.Add(m_tileObjects[checkIndex.x, checkIndex.y]);
+                    matchingTiles.Add(m_boardTileObjects[checkIndex.x, checkIndex.y]);
                     matchingTiles = CheckMatchesHorizontal(checkIndex, matchingTiles);
                 }
             }
@@ -388,12 +388,12 @@ public class BoardHandler : MonoBehaviour
         {
             Vector2Int checkIndex = index + new Vector2Int(1, 0);
 
-            if (!matchingTiles.Contains(m_tileObjects[checkIndex.x, checkIndex.y])) 
+            if (!matchingTiles.Contains(m_boardTileObjects[checkIndex.x, checkIndex.y])) 
             {
-                if (m_tileObjects[index.x, index.y].TileItem?.Name ==
-                    m_tileObjects[checkIndex.x, checkIndex.y].TileItem?.Name)
+                if (m_boardTileObjects[index.x, index.y]?.TileItem.Name ==
+                    m_boardTileObjects[checkIndex.x, checkIndex.y]?.TileItem.Name)
                 {
-                    matchingTiles.Add(m_tileObjects[checkIndex.x, checkIndex.y]);
+                    matchingTiles.Add(m_boardTileObjects[checkIndex.x, checkIndex.y]);
                     matchingTiles = CheckMatchesHorizontal(checkIndex, matchingTiles);
                 }
             }
@@ -408,12 +408,12 @@ public class BoardHandler : MonoBehaviour
         {
             Vector2Int checkIndex = index - new Vector2Int(0, 1);
             
-            if (!matchingTiles.Contains(m_tileObjects[checkIndex.x, checkIndex.y]))
+            if (!matchingTiles.Contains(m_boardTileObjects[checkIndex.x, checkIndex.y]))
             {
-                if (m_tileObjects[index.x, index.y].TileItem?.Name ==
-                    m_tileObjects[checkIndex.x, checkIndex.y].TileItem?.Name)
+                if (m_boardTileObjects[index.x, index.y]?.TileItem.Name ==
+                    m_boardTileObjects[checkIndex.x, checkIndex.y]?.TileItem.Name)
                 {
-                    matchingTiles.Add(m_tileObjects[checkIndex.x, checkIndex.y]);
+                    matchingTiles.Add(m_boardTileObjects[checkIndex.x, checkIndex.y]);
                     matchingTiles = CheckMatchesVertical(checkIndex, matchingTiles);
                 }
             }
@@ -423,12 +423,12 @@ public class BoardHandler : MonoBehaviour
         {
             Vector2Int checkIndex = index + new Vector2Int(0, 1);
 
-            if (!matchingTiles.Contains(m_tileObjects[checkIndex.x, checkIndex.y]))
+            if (!matchingTiles.Contains(m_boardTileObjects[checkIndex.x, checkIndex.y]))
             {
-                if (m_tileObjects[index.x, index.y].TileItem?.Name ==
-                    m_tileObjects[checkIndex.x, checkIndex.y].TileItem?.Name)
+                if (m_boardTileObjects[index.x, index.y]?.TileItem.Name ==
+                    m_boardTileObjects[checkIndex.x, checkIndex.y]?.TileItem.Name)
                 {
-                    matchingTiles.Add(m_tileObjects[checkIndex.x, checkIndex.y]);
+                    matchingTiles.Add(m_boardTileObjects[checkIndex.x, checkIndex.y]);
                     matchingTiles = CheckMatchesVertical(checkIndex, matchingTiles);
                 }
             }
@@ -441,25 +441,21 @@ public class BoardHandler : MonoBehaviour
     {
         foreach (TileObject tileObject in tileObjects)
         {
-            Vector2Int tileIndex = tileObject.TileIndex;
-
-            TileSubstitute fallSubstitute = GetAvailableSubstitute();
-
-            fallSubstitute.InitialiseSubstitute(tileObject.TileItem.Image);
-            Debug.Log($"{tileObject.TileItem.Image}");
-            fallSubstitute.transform.position = tileObject.transform.position;
-            fallSubstitute.gameObject.SetActive(true);
-
             Vector3 fallPosition = tileObject.transform.position;
             fallPosition.y = m_tileFallLocation.position.y - fallPosition.y;
-            
-            fallSubstitute.transform.DOMove(fallPosition, m_matchedFallTime)
-                .SetEase(Ease.InBack)
-                .OnComplete(() => fallSubstitute.gameObject.SetActive(false));
 
-            tileObject.InvalidateTile();
-            tileObject.EnableImage(false);
+            tileObject.transform.DOMove(fallPosition, m_matchedFallTime)
+                .SetEase(Ease.InBack)
+                .OnComplete(() =>
+                {
+                    tileObject.gameObject.SetActive(false);
+                    m_tileObjectPool.Add(tileObject);
+                });
+
+            m_boardTileObjects[tileObject.TileIndex.x, tileObject.TileIndex.y] = null;
         }
+
+        List<TileObject> changedTiles = new List<TileObject>();
 
         foreach (TileObject tileObject in tileObjects)
         {
@@ -467,37 +463,73 @@ public class BoardHandler : MonoBehaviour
 
             for (int i = tileIndex.x - 1; i >= 0; i--)
             {
-                TileObject fallingTile = m_tileObjects[i, tileIndex.y];
-                if (fallingTile.Validated)
+                if (m_boardTileObjects[i, tileIndex.y] != null)
                 {
-                    TileSubstitute fallSubstitute = GetAvailableSubstitute();
-                    fallSubstitute.InitialiseSubstitute(fallingTile.TileItem.Image);
-                    fallSubstitute.transform.position = fallingTile.transform.position;
-                    fallSubstitute.gameObject.SetActive(true);
+                    if (m_boardTileObjects[i + 1, tileIndex.y] != null)
+                    {
+                        continue;
+                    }
 
-                    TileObject destinationTile = m_tileObjects[i + 1, tileIndex.y];
+                    Vector2Int destIndex = new Vector2Int(i + 1, tileIndex.y);
                     for (int k = i + 2; k < m_tileRows; k++)
                     {
-                        TileObject nextTile = m_tileObjects[k, tileIndex.y];
-                        if (!nextTile.Validated)
+                        if (m_boardTileObjects[k, tileIndex.y] == null)
                         {
-                            destinationTile = nextTile;
+                            destIndex = new Vector2Int(k, tileIndex.y);
                         }
                     }
 
-                    fallSubstitute.transform.DOMove(destinationTile.transform.position, m_matchedFallTime)
-                        .SetEase(Ease.InBack)
-                        .OnComplete(() =>
-                        {
-                            fallSubstitute.gameObject.SetActive(false);
-                            destinationTile.EnableImage(true);
-                        });
+                    TileObject fallingTile = m_boardTileObjects[i, tileIndex.y];
+                    changedTiles.Add(fallingTile);
+                    
+                    fallingTile.TileIndex = destIndex;
+                    m_boardTileObjects[destIndex.x, destIndex.y] = fallingTile;
 
-                    destinationTile.InitialiseTile(fallingTile.TileItem);
-
-                    fallingTile.InvalidateTile();
-                    fallingTile.EnableImage(false);
+                    m_boardTileObjects[i, tileIndex.y] = null;
                 }
+            }
+        }
+
+        for (int i = 0; i < m_tileRows; i++)
+        {
+            for (int j = 0; j < m_tileColumns; j++)
+            {
+                if (m_boardTileObjects[i, j] == null) 
+                {
+                    Vector3 spawnPosition = m_tilePlaceholders[i, j].position;
+                    spawnPosition.y = m_tileSpawnLocation.position.y;
+
+                    TileObject replacementTile = GetPooledTile();
+                    changedTiles.Add(replacementTile);
+                    replacementTile.transform.position = spawnPosition;
+
+                    replacementTile.InitialiseTile(m_tileItems[Random.Range(0, m_tileItems.Length)]);
+                    replacementTile.EnableSelection(false);
+                    
+                    replacementTile.TileIndex = new Vector2Int(i, j);
+                    m_boardTileObjects[i, j] = replacementTile;
+                }
+            }
+        }
+
+        foreach (TileObject changedTile in changedTiles)
+        {
+            Vector3 finalPosition = m_tilePlaceholders[changedTile.TileIndex.x, changedTile.TileIndex.y].position;
+            changedTile.transform.DOMove(finalPosition, m_spawnFallTime).SetEase(Ease.OutBack);
+        }
+
+        StartCoroutine(CheckNewMatchesRoutine(changedTiles));
+    }
+
+    private IEnumerator CheckNewMatchesRoutine(List<TileObject> tileObjects)
+    {
+        yield return new WaitForSeconds(m_spawnFallTime + m_newMatchBufferTime);
+
+        foreach (TileObject tileObject in tileObjects)
+        {
+            if (CheckMatches(tileObject.TileIndex, out List<TileObject> matchingTiles))
+            {
+                HandleMatchedTiles(matchingTiles);
             }
         }
     }
