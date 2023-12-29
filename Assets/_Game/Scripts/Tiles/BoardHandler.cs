@@ -34,6 +34,8 @@ public class BoardHandler : MonoBehaviour
     
     private TileObject m_currentSelectedTile;
 
+    private int m_newMatchesCheckRoutines = 0;
+
     private void Start()
     {
         m_boardTileObjects = new TileObject[m_tileRows, m_tileColumns];
@@ -518,19 +520,166 @@ public class BoardHandler : MonoBehaviour
             changedTile.transform.DOMove(finalPosition, m_spawnFallTime).SetEase(Ease.OutBack);
         }
 
+        m_newMatchesCheckRoutines++;
         StartCoroutine(CheckNewMatchesRoutine(changedTiles));
     }
 
     private IEnumerator CheckNewMatchesRoutine(List<TileObject> tileObjects)
     {
         yield return new WaitForSeconds(m_spawnFallTime + m_newMatchBufferTime);
-
+        
         foreach (TileObject tileObject in tileObjects)
         {
             if (CheckMatches(tileObject.TileIndex, out List<TileObject> matchingTiles))
             {
                 HandleMatchedTiles(matchingTiles);
             }
+        }
+
+        yield return new WaitForEndOfFrame();
+
+        m_newMatchesCheckRoutines--;
+        if (m_newMatchesCheckRoutines == 0)
+        {
+            CheckPotentialMatches();
+        }
+    }
+
+    private void CheckPotentialMatches()
+    {
+        for (int i = 0; i < m_tileRows; i++)
+        {
+            for (int j = 0; j < m_tileColumns; j++)
+            {
+                if (i > 0 && i < m_tileRows - 1)
+                {
+                    if (m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i + 1, j].TileItem?.Name)
+                    {
+                        if (j > 0) 
+                        {
+                            if (m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i - 1, j - 1].TileItem?.Name)
+                            {
+                                return;
+                            }
+                            
+                            if (i < m_tileRows - 2 && 
+                                     m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i + 2, j - 1].TileItem?.Name)
+                            {
+                                return;
+                            }
+                        }
+
+                        if (j < m_tileColumns - 1)
+                        {
+                            if (m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i - 1, j + 1].TileItem?.Name)
+                            {
+                                return;
+                            }
+
+                            if (i < m_tileRows - 2 &&
+                                m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i + 2, j + 1].TileItem?.Name)
+                            {
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                if (j > 0 && j < m_tileColumns - 1)
+                {
+                    if (m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i, j + 1].TileItem?.Name)
+                    {
+                        if (i > 0)
+                        {
+                            if (m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i - 1, j - 1].TileItem?.Name)
+                            {
+                                return;
+                            }
+
+                            if (j < m_tileColumns - 2 &&
+                                m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i - 1, j + 2].TileItem?.Name)
+                            {
+                                return;
+                            }
+                        }
+
+                        if (i < m_tileRows - 1)
+                        {
+                            if (m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i + 1, j - 1].TileItem?.Name)
+                            {
+                                return;
+                            }
+
+                            if (j < m_tileColumns - 2 &&
+                                m_boardTileObjects[i, j].TileItem?.Name == m_boardTileObjects[i + 1, j + 2].TileItem?.Name)
+                            {
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        StartCoroutine(RepopulateBoard());
+    }
+
+    private IEnumerator RepopulateBoard()
+    {
+        for (int i = 0; i < m_tileRows; i++)
+        {
+            for (int j = 0; j < m_tileColumns; j++)
+            {
+                TileObject tileObject = m_boardTileObjects[i, j];
+
+                Vector3 fallPosition = tileObject.transform.position;
+                fallPosition.y = m_tileFallLocation.position.y - fallPosition.y;
+
+                tileObject.transform.DOMove(fallPosition, m_matchedFallTime)
+                    .SetEase(Ease.InBack)
+                    .OnComplete(() =>
+                    {
+                        tileObject.gameObject.SetActive(false);
+                        m_tileObjectPool.Add(tileObject);
+                    });
+
+                m_boardTileObjects[i, j] = null;
+            }
+        }
+
+        yield return new WaitForSeconds(m_matchedFallTime);
+
+        for (int i = 0; i < m_tileRows; i++)
+        {
+            for (int j = 0; j < m_tileColumns; j++)
+            {
+                Vector3 spawnPosition = m_tilePlaceholders[i, j].position;
+                spawnPosition.y = m_tileSpawnLocation.position.y;
+
+                TileObject tileObject = GetPooledTile();
+                tileObject.transform.position = spawnPosition;
+
+                tileObject.InitialiseTile(m_tileItems[Random.Range(0, m_tileItems.Length)]);
+                tileObject.EnableSelection(false);
+                tileObject.TileIndex = new Vector2Int(i, j);
+
+                m_boardTileObjects[i, j] = tileObject;
+            }
+        }
+
+        FixMatchingTiles();
+
+        WaitForSeconds columnSpawnSeconds = new WaitForSeconds(m_spawnNextColumnTime);
+
+        for (int j = 0; j < m_tileColumns; j++)
+        {
+            for (int i = 0; i < m_tileRows; i++)
+            {
+                Vector3 finalPosition = m_tilePlaceholders[i, j].position;
+                m_boardTileObjects[i, j].transform.DOMove(finalPosition, m_spawnFallTime).SetEase(Ease.OutBack);
+            }
+
+            yield return columnSpawnSeconds;
         }
     }
 }

@@ -450,10 +450,15 @@ MonoBehaviour:
   m_tilePrefab: {fileID: 8299348901185108640, guid: a2278ac0489f03e46b2ef5c1cd38d355, type: 3}
   m_tileItems:
   - {fileID: 11400000, guid: c1b92efd85e35eb49b70f99e9c1c15d0, type: 2}
-  - {fileID: 11400000, guid: 6b1ced90c7f044b4a9bb4d03610f5f1f, type: 2}
+  - {fileID: 11400000, guid: b8c7a5715921e7841a107ed4cab27e57, type: 2}
   - {fileID: 11400000, guid: f82ddc8b6d52bdd44b0388cb97af86a7, type: 2}
   - {fileID: 11400000, guid: 2b569875ad7b0e54e974bf9701c8dd79, type: 2}
   - {fileID: 11400000, guid: f2788ee64b524394a9ff4e6d34d71b06, type: 2}
+  - {fileID: 11400000, guid: 261c35060352a3649a613b1ad52a29c7, type: 2}
+  - {fileID: 11400000, guid: a1a5dc54ba9221e4db0a929ed9fa85d5, type: 2}
+  - {fileID: 11400000, guid: 7aa6ad99b37a31f4c80de5bd726a952c, type: 2}
+  - {fileID: 11400000, guid: 21acb88592905774ea8f91d1a1475803, type: 2}
+  - {fileID: 11400000, guid: 6b1ced90c7f044b4a9bb4d03610f5f1f, type: 2}
   m_tilePlaceholder: {fileID: 6605256912425589483, guid: 2eefec5d64b0b6a41b5dfa2ced6d9ff6, type: 3}
   m_tileSpawnLocation: {fileID: 5113383}
   m_tileFallLocation: {fileID: 455217857}
