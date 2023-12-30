@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a36f87a5c0560cd4a90f4dac53fb7ffc, type: 3}
+  m_Name: Creamy fish pie
+  m_EditorClassIdentifier: 
+  m_name: Creamy Fish Pie
+  m_image: {fileID: 21300000, guid: 9180c75bc7908b449a39fed220ac0439, type: 3}
+  m_ingredient1: {fileID: 11400000, guid: 21acb88592905774ea8f91d1a1475803, type: 2}
+  m_ingredient2: {fileID: 11400000, guid: 45e1b2fd1ccdd8441858b626b08664ed, type: 2}
+  m_ingredient3: {fileID: 11400000, guid: f59cb7986a76db144800bab5d1feffc6, type: 2}
