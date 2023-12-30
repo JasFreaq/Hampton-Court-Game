@@ -397,6 +397,7 @@ GameObject:
   m_Component:
   - component: {fileID: 795621539}
   - component: {fileID: 795621540}
+  - component: {fileID: 795621544}
   - component: {fileID: 795621542}
   - component: {fileID: 795621543}
   m_Layer: 5
@@ -445,29 +446,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1625d8906f82379478057c0d979e1b3d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_tileRows: 5
-  m_tileColumns: 12
-  m_tilePrefab: {fileID: 8299348901185108640, guid: a2278ac0489f03e46b2ef5c1cd38d355, type: 3}
-  m_tileItems:
-  - {fileID: 11400000, guid: c1b92efd85e35eb49b70f99e9c1c15d0, type: 2}
-  - {fileID: 11400000, guid: b8c7a5715921e7841a107ed4cab27e57, type: 2}
-  - {fileID: 11400000, guid: f82ddc8b6d52bdd44b0388cb97af86a7, type: 2}
-  - {fileID: 11400000, guid: 2b569875ad7b0e54e974bf9701c8dd79, type: 2}
-  - {fileID: 11400000, guid: f2788ee64b524394a9ff4e6d34d71b06, type: 2}
-  - {fileID: 11400000, guid: 261c35060352a3649a613b1ad52a29c7, type: 2}
-  - {fileID: 11400000, guid: a1a5dc54ba9221e4db0a929ed9fa85d5, type: 2}
-  - {fileID: 11400000, guid: 7aa6ad99b37a31f4c80de5bd726a952c, type: 2}
-  - {fileID: 11400000, guid: 21acb88592905774ea8f91d1a1475803, type: 2}
-  - {fileID: 11400000, guid: 6b1ced90c7f044b4a9bb4d03610f5f1f, type: 2}
-  m_tilePlaceholder: {fileID: 6605256912425589483, guid: 2eefec5d64b0b6a41b5dfa2ced6d9ff6, type: 3}
-  m_tileSpawnLocation: {fileID: 5113383}
-  m_tileFallLocation: {fileID: 455217857}
-  m_tileObjectPoolCount: 12
-  m_spawnFallTime: 0.6
+  m_spawnFallTime: 0.8
   m_spawnNextColumnTime: 0.25
   m_tileSwapTime: 1
-  m_matchedFallTime: 0.4
+  m_matchedFallTime: 0.6
   m_newMatchBufferTime: 0.2
+  m_repopulateBufferTime: 0.1
+  m_tileFallLocation: {fileID: 455217857}
 --- !u!114 &795621543
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -492,6 +477,31 @@ MonoBehaviour:
   m_Spacing: {x: 8, y: 5}
   m_Constraint: 0
   m_ConstraintCount: 2
+--- !u!114 &795621544
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 795621538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70bbb4b2bc6ec384b9e6fa98f5ad505f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_tileRows: 5
+  m_tileColumns: 12
+  m_tilePrefab: {fileID: 8299348901185108640, guid: a2278ac0489f03e46b2ef5c1cd38d355, type: 3}
+  m_tileItems:
+  - {fileID: 11400000, guid: c1b92efd85e35eb49b70f99e9c1c15d0, type: 2}
+  - {fileID: 11400000, guid: b8c7a5715921e7841a107ed4cab27e57, type: 2}
+  - {fileID: 11400000, guid: f82ddc8b6d52bdd44b0388cb97af86a7, type: 2}
+  - {fileID: 11400000, guid: 2b569875ad7b0e54e974bf9701c8dd79, type: 2}
+  - {fileID: 11400000, guid: f2788ee64b524394a9ff4e6d34d71b06, type: 2}
+  - {fileID: 11400000, guid: 261c35060352a3649a613b1ad52a29c7, type: 2}
+  m_tilePlaceholder: {fileID: 6605256912425589483, guid: 2eefec5d64b0b6a41b5dfa2ced6d9ff6, type: 3}
+  m_tileSpawnLocation: {fileID: 5113383}
+  m_tileObjectPoolCount: 12
 --- !u!1 &1216685298
 GameObject:
   m_ObjectHideFlags: 0
